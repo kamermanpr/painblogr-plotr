@@ -887,3 +887,147 @@ output$histogram_download_button <- downloadHandler(
     }
   )
 ```
+
+Bar chart {data-navmenu='Select a plot type'}
+=====================================  
+
+Column {.sidebar data-width=350}
+-------------------------------------
+
+```{r column_1}
+h1('Bar chart')
+
+p('The input must be a single continuous variable')
+
+p('For download options, scroll to the bottom of this sidebar.')
+
+hr()
+
+# Upload file
+fileInput(inputId = 'bar_file0', 
+          label = 'Import data',
+          multiple = FALSE,
+          accept = c('.csv'))
+
+# Make reactive data
+bar_df <- reactive({
+    req(input$bar_file0)
+    read_csv(input$bar_file0$datapath, 
+             show_col_types = FALSE)
+})
+
+# Select variables
+## Response variable
+output$bar_var <- renderUI({
+    varSelectInput(inputId = 'bar_var',
+                   label = 'Choose variable to be plotted',
+                   data = bar_df())
+    })
+
+uiOutput('bar_var')
+
+## Add labels
+textInput(inputId = 'bar_title', 
+          label = 'Plot title',
+          value = NULL)
+
+textInput(inputId = 'bar_y_label', 
+          label = 'Y-axis label',
+          value = 'Count')
+
+textInput(inputId = 'bar_x_label', 
+          label = 'X-axis label',
+          value = NULL)
+
+## Base font size
+sliderInput(inputId = 'bar_base_size',
+            label = 'Font size',
+            value = 18,
+            min = 8,
+            max = 28)
+
+## Bar transparency size
+sliderInput(inputId = 'bar_alpha',
+            label = 'Bar transparency',
+            value = 0.6,
+            min = 0,
+            max = 1)
+
+hr()
+
+h1('Download plot')
+
+# Format
+selectInput(inputId = 'bar_format',
+            label = 'Choose file format',
+            selected = 'png',
+            choices = c('bmp', 'jpg', 'pdf', 'png'))
+
+# Plot width
+numericInput(inputId = 'bar_width',
+             label = 'Figure width (cm)',
+             value = 18)
+
+## Plot height
+numericInput(inputId = 'bar_height',
+             label = 'Figure height (cm)',
+             value = 13)
+
+# Add download button
+output$bar_download_button <- renderUI({
+    downloadButton(outputId = 'barchart_download_button',
+                   label = "'Click' to download image")
+    })
+
+uiOutput('bar_download_button')
+```
+
+Column
+-------------------------------------
+
+### Plot
+
+```{r column_2}
+# Plot graph
+output$bar_plot <- renderPlot(
+    
+        ggplot(data = bar_df()) +
+        aes(bar_df()[[input$bar_var]]) +
+        geom_histogram(binwidth = input$bar_bin_width,
+                       fill = '#000000',
+                       colour = '#000000',
+                       alpha = input$bar_alpha) +
+        labs(title = input$bar_title,
+             y = input$bar_y_label,
+             x = input$bar_x_label) +
+        theme_minimal(base_size = input$bar_base_size) +
+            theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                 fill = '#FFFFFF'),
+                  plot.title = element_text(size = input$bar_base_size),
+                  axis.text = element_text(colour = '#000000'),
+                  axis.line = element_line(colour = '#000000',
+                                           size = 0.5),
+                  axis.ticks = element_line(colour = '#000000',
+                                            size = 0.5),
+                  panel.grid = element_blank())
+        
+        )
+
+plotOutput('bar_plot')
+```
+
+```{r column_3}
+# Download plot
+output$barchart_download_button <- downloadHandler(
+    filename = function() {
+        paste0('histogram_', Sys.Date(), '.', input$bar_format)
+    },
+    content = function(file) {
+        plotOutput('bar_plot')
+        ggsave(file, 
+               width = input$bar_width, 
+               height = input$bar_height,
+               units = 'cm')
+    }
+  )
+```
