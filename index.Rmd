@@ -16,7 +16,6 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(ggthemes)
-library(ggforce)
 ```
 
 ```{r eval = FALSE}
@@ -114,6 +113,8 @@ Column {.sidebar data-width=350}
 h1('Boxplot')
 
 p('For plot download options, scroll to the bottom of this sidebar.')
+
+p('The plot window will indicate an error if a discrete (categorical) variable is chosen as the response variable.')
 
 p('Beeswarm points are "jittered" horizontally only. That is, the value of each point, as measured on the y-axis, remains unchanged.')
 
@@ -269,12 +270,12 @@ selectInput(inputId = 'box_format',
 # Plot width
 numericInput(inputId = 'box_width',
              label = 'Figure width (cm)',
-             value = 18)
+             value = 17)
 
 ## Plot height
 numericInput(inputId = 'box_height',
              label = 'Figure height (cm)',
-             value = 13)
+             value = 14)
 
 # Add download button
 output$box_download_button <- renderUI({
@@ -336,8 +337,10 @@ output$box_plot <- renderPlot(
                          x = input$box_x_label) +
                     scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
                     scale_x_discrete(na.translate = FALSE) +
-                    scale_fill_tableau(palette = input$box_colours) +
-                    scale_colour_tableau(palette = input$box_colours) +
+                    scale_fill_tableau(palette = input$box_colours,
+                                       na.translate = FALSE) +
+                    scale_colour_tableau(palette = input$box_colours,
+                                         na.translate = FALSE) +
                     theme_minimal(base_size = input$box_base_size) +
                     theme(legend.position = input$box_legend_position,
                           legend.title = element_blank(),
@@ -365,8 +368,10 @@ output$box_plot <- renderPlot(
                              x = input$box_x_label) +
                         scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
                         scale_x_discrete(na.translate = FALSE) +
-                        scale_fill_tableau(palette = input$box_colours) +
-                        scale_colour_tableau(palette = input$box_colours) +
+                        scale_fill_tableau(palette = input$box_colours,
+                                           na.translate = FALSE) +
+                        scale_colour_tableau(palette = input$box_colours,
+                                             na.translate = FALSE) +
                         theme_minimal(base_size = input$box_base_size) +
                         theme(legend.position = c(input$box_x_legend, input$box_y_legend),
                               legend.title = element_blank(),
@@ -392,7 +397,7 @@ output$box_plot <- renderPlot(
                 ggplot(data = .) +
                 aes(x = !!input$box_group_var,
                     y = !!input$box_y_var) +
-                geom_boxplot() +
+                geom_boxplot(outlier.shape = NA) +
                 geom_point(position = position_jitter(seed = 1234,
                                                       width = input$box_scatter_width,
                                                       height = 0),
@@ -432,7 +437,8 @@ output$box_plot <- renderPlot(
                             y = !!input$box_y_var,
                             fill = box_df()[[input$box_group2_var]],
                             colour = box_df()[[input$box_group2_var]]) +
-                    geom_boxplot(alpha = 0.6) +
+                    geom_boxplot(outlier.shape = NA,
+                                 alpha = 0.6) +
                     geom_point(position = position_jitterdodge(seed = 1234,
                                                           jitter.width = input$box_scatter_width,
                                                           jitter.height = 0),
@@ -450,8 +456,10 @@ output$box_plot <- renderPlot(
                          x = input$box_x_label) +
                     scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
                     scale_x_discrete(na.translate = FALSE) +
-                    scale_fill_tableau(palette = input$box_colours) +
-                    scale_colour_tableau(palette = input$box_colours) +
+                    scale_fill_tableau(palette = input$box_colours,
+                                       na.translate = FALSE) +
+                    scale_colour_tableau(palette = input$box_colours,
+                                         na.translate = FALSE) +
                     theme_minimal(base_size = input$box_base_size) +
                     theme(legend.position = input$box_legend_position,
                           legend.title = element_blank(),
@@ -473,7 +481,8 @@ output$box_plot <- renderPlot(
                             y = !!input$box_y_var,
                             fill = box_df()[[input$box_group2_var]],
                             colour = box_df()[[input$box_group2_var]]) +
-                        geom_boxplot(alpha = 0.6) +
+                        geom_boxplot(outlier.shape = NA,
+                                     alpha = 0.6) +
                         geom_point(position = position_jitterdodge(seed = 1234,
                                                               jitter.width = input$box_scatter_width,
                                                               jitter.height = 0),
@@ -491,8 +500,10 @@ output$box_plot <- renderPlot(
                              x = input$box_x_label) +
                         scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
                         scale_x_discrete(na.translate = FALSE) +
-                        scale_fill_tableau(palette = input$box_colours) +
-                        scale_colour_tableau(palette = input$box_colours) +
+                        scale_fill_tableau(palette = input$box_colours,
+                                           na.translate = FALSE) +
+                        scale_colour_tableau(palette = input$box_colours,
+                                             na.translate = FALSE) +
                         theme_minimal(base_size = input$box_base_size) +
                         theme(legend.position = c(input$box_x_legend, input$box_y_legend),
                               legend.title = element_blank(),
