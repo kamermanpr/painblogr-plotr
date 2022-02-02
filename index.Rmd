@@ -550,7 +550,7 @@ Column {.sidebar data-width=350}
 ```{r scatter_1}
 h1('Scatter plot')
 
-p('If there is a grouping variable, import data in long format (see example:', a('here', href = 'https://drive.google.com/open?id=1--iOezcoFaE9C-x4JiT6zygNOKyrWNh0&authuser=peter.kamerman%40gmail.com&usp=drive_fs', target='_blank'), ').')
+p('The plot window will indicate an error if a discrete (categorical) variable is chosen as a response variable.')
 
 p('For download options, scroll to the bottom of this sidebar.')
 
@@ -639,30 +639,6 @@ sliderInput(inputId = 'scatter_alpha',
             min = 0,
             max = 1)
 
-## Colour scheme
-selectInput(inputId = 'scatter_colours',
-            label = 'Colour scheme (used with grouping variable)',
-            selected = NULL,
-            choices = c('Default (20 colours)' = 'Tableau 20',
-                        'Tableau (10 colours)' = 'Tableau 10',
-                        'Colour blind (10 colours)' = 'Color Blind',
-                        'Grey (5 colours)' = 'Classic Gray 5'))
-
-## Legend position
-### x value
-sliderInput(inputId = 'scatter_x_legend',
-            label = 'Legend position (x-axis coordinate)',
-            value = 0.85,
-            min = 0,
-            max = 1)
-
-### y-value
-sliderInput(inputId = 'scatter_y_legend',
-            label = 'Legend position (y-axis coordinate)',
-            value = 0.85,
-            min = 0,
-            max = 1)
-
 ## Y-axis limits
 numericInput(inputId = 'scatter_min_y',
              label = 'Minimum y-axis value',
@@ -680,6 +656,42 @@ numericInput(inputId = 'scatter_min_x',
 numericInput(inputId = 'scatter_max_x',
              label = 'Maximum x-axis value',
              value = NULL)
+
+hr()
+
+strong('Options for grouping variable')
+
+## Colour scheme
+selectInput(inputId = 'scatter_colours',
+            label = 'Colour scheme',
+            selected = NULL,
+            choices = c('Default (20 colours)' = 'Tableau 20',
+                        'Tableau (10 colours)' = 'Tableau 10',
+                        'Colour blind (10 colours)' = 'Color Blind',
+                        'Grey (5 colours)' = 'Classic Gray 5'))
+
+## Legend position
+radioButtons(inputId = 'scatter_legend_position',
+             label = 'Legend position',
+             choices = c('None' = 'none',
+                         'Right side of plot' = 'right',
+                         'Above the plot' = 'top',
+                         'User-defined' = 'legend_user'),
+             selected = 'none')
+
+### x value
+sliderInput(inputId = 'scatter_x_legend',
+            label = 'User-defined legend position (x coordinate)',
+            value = 0.85,
+            min = 0,
+            max = 1)
+
+### y-value
+sliderInput(inputId = 'scatter_y_legend',
+            label = 'User-defined legend position (y coordinate)',
+            value = 0.85,
+            min = 0,
+            max = 1)
 
 hr()
 
@@ -722,8 +734,8 @@ output$scatter_plot <- renderPlot(
     if(req(input$scatter_smooth) == 'none' & req(input$scatter_group_var) == 'None'){
         
         ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]]) +
+        aes(x = !!input$scatter_x_var,
+            y = !!input$scatter_y_var) +
         geom_point(shape = 21,
                    colour = '#000000',
                    fill = '#000000',
@@ -738,23 +750,21 @@ output$scatter_plot <- renderPlot(
         scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
         scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
         theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
-                                                 fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
+        theme(plot.background = element_rect(colour = '#FFFFFF',
+                                             fill = '#FFFFFF'),
+              plot.title = element_text(size = input$scatter_base_size),
+              axis.text = element_text(colour = '#000000'),
+              axis.line = element_line(colour = '#000000',
+                                       size = 0.5),
+              axis.ticks = element_line(colour = '#000000',
+                                        size = 0.5),
+              panel.grid = element_blank())
         
     } else if(input$scatter_smooth == 'linear' & input$scatter_group_var == 'None'){
         
         ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]]) +
+        aes(x = !!input$scatter_x_var,
+            y = !!input$scatter_y_var) +
         geom_point(shape = 21,
                    colour = '#000000',
                    fill = '#000000',
@@ -773,23 +783,21 @@ output$scatter_plot <- renderPlot(
         scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
         scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
         theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
-                                                 fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
+        theme(plot.background = element_rect(colour = '#FFFFFF',
+                                             fill = '#FFFFFF'),
+              plot.title = element_text(size = input$scatter_base_size),
+              axis.text = element_text(colour = '#000000'),
+              axis.line = element_line(colour = '#000000',
+                                       size = 0.5),
+              axis.ticks = element_line(colour = '#000000',
+                                        size = 0.5),
+              panel.grid = element_blank())
         
     } else if(input$scatter_smooth == 'loess' & input$scatter_group_var == 'None'){
         
         ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]]) +
+        aes(x = !!input$scatter_x_var,
+            y = !!input$scatter_y_var) +
         geom_point(shape = 21,
                    colour = '#000000',
                    fill = '#000000',
@@ -808,123 +816,249 @@ output$scatter_plot <- renderPlot(
         scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
         scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
         theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
+        theme(plot.background = element_rect(colour = '#FFFFFF',
                                                  fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
+              plot.title = element_text(size = input$scatter_base_size),
+              axis.text = element_text(colour = '#000000'),
+              axis.line = element_line(colour = '#000000',
+                                       size = 0.5),
+              axis.ticks = element_line(colour = '#000000',
+                                        size = 0.5),
+              panel.grid = element_blank())
         
     } else if(input$scatter_smooth == 'linear' & input$scatter_group_var != 'None'){
         
-        ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]],
-            fill = scatter_df()[[input$scatter_group_var]],
-            colour = scatter_df()[[input$scatter_group_var]]) +
-        geom_point(shape = 21,
-                   alpha = input$scatter_alpha,
-                   size = input$scatter_size) +
-        geom_point(shape = 21,
-                   fill = NA,
-                   size = input$scatter_size) +
-        geom_smooth(method = 'lm',
-                    size = 1,
-                    se = FALSE) +
-        labs(title = input$scatter_title,
-             y = input$scatter_y_label,
-             x = input$scatter_x_label) +
-        scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
-        scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
-        scale_colour_tableau(palette = input$scatter_colours) +
-        scale_fill_tableau(palette = input$scatter_colours) +
-        theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
-                                                 fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
+        if(input$scatter_legend_position != 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                geom_smooth(method = 'lm',
+                            size = 1,
+                            se = FALSE) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = input$scatter_legend_position,
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$scatter_legend_position == 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                geom_smooth(method = 'lm',
+                            size = 1,
+                            se = FALSE) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
         
     } else if(input$scatter_smooth == 'loess' & input$scatter_group_var != 'None'){
         
-        ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]],
-            fill = scatter_df()[[input$scatter_group_var]],
-            colour = scatter_df()[[input$scatter_group_var]]) +
-        geom_point(shape = 21,
-                   alpha = input$scatter_alpha,
-                   size = input$scatter_size) +
-        geom_point(shape = 21,
-                   fill = NA,
-                   size = input$scatter_size) +
-        geom_smooth(method = 'loess',
-                    size = 1,
-                    se = FALSE) +
-        labs(title = input$scatter_title,
-             y = input$scatter_y_label,
-             x = input$scatter_x_label) +
-        scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
-        scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
-        scale_colour_tableau(palette = input$scatter_colours) +
-        scale_fill_tableau(palette = input$scatter_colours) +
-        theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
-                                                 fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
+        if(input$scatter_legend_position != 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                geom_smooth(method = 'loess',
+                            size = 1,
+                            se = FALSE) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = input$scatter_legend_position,
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$scatter_legend_position == 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                geom_smooth(method = 'loess',
+                            size = 1,
+                            se = FALSE) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
         
     } else {
         
-        ggplot(data = scatter_df()) +
-        aes(x = scatter_df()[[input$scatter_x_var]],
-            y = scatter_df()[[input$scatter_y_var]],
-            fill = scatter_df()[[input$scatter_group_var]],
-            colour = scatter_df()[[input$scatter_group_var]]) +
-        geom_point(shape = 21,
-                   alpha = input$scatter_alpha,
-                   size = input$scatter_size) +
-        geom_point(shape = 21,
-                   fill = NA,
-                   size = input$scatter_size) +
-        labs(title = input$scatter_title,
-             y = input$scatter_y_label,
-             x = input$scatter_x_label) +
-        scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
-        scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
-        scale_colour_tableau(palette = input$scatter_colours) +
-        scale_fill_tableau(palette = input$scatter_colours) +
-        theme_minimal(base_size = input$scatter_base_size) +
-            theme(plot.background = element_rect(colour = '#FFFFFF',
-                                                 fill = '#FFFFFF'),
-                  plot.title = element_text(size = input$scatter_base_size),
-                  legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
-                  legend.title = element_blank(),
-                  axis.text = element_text(colour = '#000000'),
-                  axis.line = element_line(colour = '#000000',
-                                           size = 0.5),
-                  axis.ticks = element_line(colour = '#000000',
-                                            size = 0.5),
-                  panel.grid = element_blank())
-        
+        if(input$scatter_legend_position != 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = input$scatter_legend_position,
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$scatter_legend_position == 'legend_user'){
+            
+            ggplot(data = scatter_df()) +
+                aes(x = !!input$scatter_x_var,
+                    y = !!input$scatter_y_var,
+                    fill = scatter_df()[[input$scatter_group_var]],
+                    colour = scatter_df()[[input$scatter_group_var]]) +
+                geom_point(shape = 21,
+                           alpha = input$scatter_alpha,
+                           size = input$scatter_size) +
+                geom_point(shape = 21,
+                           fill = NA,
+                           size = input$scatter_size) +
+                labs(title = input$scatter_title,
+                     y = input$scatter_y_label,
+                     x = input$scatter_x_label) +
+                scale_x_continuous(limits = c(input$scatter_min_x, input$scatter_max_x)) +
+                scale_y_continuous(limits = c(input$scatter_min_y, input$scatter_max_y)) +
+                scale_colour_tableau(palette = input$scatter_colours,
+                                     na.translate = FALSE) +
+                scale_fill_tableau(palette = input$scatter_colours,
+                                   na.translate = FALSE) +
+                theme_minimal(base_size = input$scatter_base_size) +
+                theme(plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$scatter_base_size),
+                      legend.position = c(input$scatter_x_legend, input$scatter_y_legend),
+                      legend.title = element_blank(),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
     }
 )
 
