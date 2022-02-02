@@ -1090,7 +1090,7 @@ Column {.sidebar data-width=350}
 ```{r histogram_1}
 h1('Histogram')
 
-p('The input must be a single continuous variable')
+p('The input must be a single continuous variable, otherwise the plot window will show an error.')
 
 p('For download options, scroll to the bottom of this sidebar.')
 
