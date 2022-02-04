@@ -15,8 +15,28 @@ library(rlang)
 library(readr)
 library(dplyr)
 library(tidyr)
+library(skimr)
 library(ggplot2)
 library(ggthemes)
+
+# skimr variables
+my_skim <- skim_with(base = sfl(Missing = n_missing,
+                                Complete = n_complete),
+                     numeric = sfl(mean = NULL, sd = NULL,
+                                   p0 = NULL, p25 = NULL, p50 = NULL, 
+                                   p75 = NULL, p100 = NULL, hist = NULL,
+                                   Mean = ~ mean(., na.rm = TRUE),
+                                   SD = ~ sd(., na.rm = TRUE),
+                                   Min = ~ min(., na.rm = TRUE),
+                                   Q1 = ~ quantile(., probs = 0.25, na.rm = TRUE),
+                                   Median = ~ quantile(., probs = 0.5, na.rm = TRUE),
+                                   Q3 = ~ quantile(., probs = 0.75, na.rm = TRUE),
+                                   Max = ~max(., na.rm = TRUE)),
+                     factor = sfl(ordered = NULL,
+                                  top_counts = NULL,
+                                  `Top 3 levels` = ~ top_counts(., 
+                                                                max_char = 15,
+                                                                max_levels = 3)))
 ```
 
 ```{r eval = FALSE}
@@ -51,7 +71,7 @@ penguins %>%
     write_csv(file = 'data/penguins_sample.csv')
 ```
 
-Welcome {data-navmenu='Select a plot type'}
+Welcome {data-nav='Welcome'}
 ===================================== 
 
 <a href='https://www.wits.ac.za' target='_blank'>
@@ -68,9 +88,9 @@ To analyse your data, please use the companion app, [`statr`](https://kamermanpr
 
 **Steps to plotting your data**  
 
-- Choose the type of plot you want from the drop-down menu labelled _“Select a plot type”_.
+- Go to the _"Upload data"_ page, upload your data and choose the variables according to whether they are numeric values or categorical values
 
-- Upload your data (see below for format instructions).
+- Once the data have been uploaded and variables selected, choose the type of plot you want from the drop-down menu labelled _“Select a plot type”_.
 
 - Select the variables to plot (the plot will be auto-generated).
 
@@ -80,7 +100,7 @@ To analyse your data, please use the companion app, [`statr`](https://kamermanpr
 
 **Data format**  
 
-Only CSV files can be uploaded, and the data must be **"tidy"**. By "tidy", we mean that the  data must be arranged in "long" format such that:
+Only CSV files can be uploaded, and the data must be "tidy". By "tidy", we mean that the data must be arranged in "long" format such that:
 
 - Each row contains data from an observation.
 
@@ -98,11 +118,119 @@ To download a dataset to play around with on the app, we recommend [Allison Hors
 
 **Developers**  
 
-The app was developed by Peter Kamerman (WWW: [painblogr.org](https://www.painblogr.org){ target='_blank'}, GitHub: [kamermanpr](https://github.com/kamermanpr.git){ target='_blank' }) and Kavalin Nair (GitHub: [TripleBlackCat](https://github.com/TripleBlackCat.git){ target='_blank' }).
+The app was developed by Peter Kamerman (WWW: [painblogr.org](https://www.painblogr.org){ target='_blank'}, GitHub: [kamermanpr](https://github.com/kamermanpr){ target='_blank' }) and Kavalin Nair (GitHub: [TripleBlackCat](https://github.com/TripleBlackCat){ target='_blank' }).
 
 **License**  
 
 The software is released under an [MIT license](https://github.com/kamermanpr/painblogr-plotr/blob/main/LICENSE){ target='_blank' }.
+
+**Issues**
+
+To report any issues you have with the app, please use the following [link](https://github.com/kamermanpr/painblogr-plotr/issues){ target='_blank' }.
+
+
+Upload data {data-nav='Upload data'}
+=====================================
+
+Column {.sidebar data-width=350}
+-------------------------------------
+
+```{r upload_1}
+h1('Upload data')
+
+p('Once the data have been uploaded, choose all variables that should be treated as numeric variables, and all variables that should be treated as categorical variables.')
+
+hr()
+
+# Upload file
+fileInput(inputId = 'file0', 
+          label = 'Import data (csv format)',
+          multiple = FALSE,
+          accept = c('.csv'))
+
+# Make reactive data
+df <- reactive({
+    req(input$file0)
+    read_csv(input$file0$datapath, 
+             show_col_types = FALSE)
+})
+
+# Choose numeric columns
+output$data_numeric <- renderUI({
+    varSelectizeInput(inputId = 'numeric',
+                   label = 'Select numeric variables',
+                   multiple = TRUE,
+                   data = df())
+})
+
+uiOutput('data_numeric')
+
+# Choose categorical columns
+output$data_categorical <- renderUI({
+    varSelectizeInput(inputId = 'categorical',
+                   label = 'Select categorical variables',
+                   multiple = TRUE,
+                   data = df())
+})
+
+uiOutput('data_categorical')
+
+```
+
+Row 
+-------------------------------------
+
+### Table 1: Summary of numeric variables
+
+```{r upload_2}
+df_numeric <- reactive({
+    req(df())
+    df() %>% 
+        select(!!!input$numeric) %>% 
+        mutate(across(.cols = everything(), ~ as.numeric(.x)))
+})
+
+output$tbl_numeric <- renderTable(
+    if(ncol(df_numeric()) != 0){
+        df_numeric() %>% 
+            my_skim() %>% 
+            yank('numeric') %>% 
+            rename(Variable = skim_variable)
+    }
+)
+
+tableOutput('tbl_numeric')
+```
+
+### Table 2: Summary of categorical variables
+
+```{r upload_3}
+df_categorical <- reactive({
+    req(df())
+    df() %>% 
+        select(!!!input$categorical) %>% 
+        mutate(across(.cols = everything(), ~ as.factor(.x)))
+})
+
+output$tbl_categorical <- renderTable(
+    if(ncol(df_categorical()) != 0){
+        df_categorical() %>% 
+            my_skim() %>% 
+            yank('factor') %>% 
+            rename(Variable = skim_variable,
+                   `Unique levels` = n_unique)
+    }
+)
+
+tableOutput('tbl_categorical')
+```
+
+```{r upload_4}
+# Generate combined data file
+df_combined <- reactive({
+    bind_cols(df_numeric(), df_categorical())
+    })
+```
 
 Boxplot {data-navmenu='Select a plot type'}
 =====================================  
@@ -113,7 +241,7 @@ Column {.sidebar data-width=350}
 ```{r boxplot_1}
 h1('Boxplot')
 
-p('Only numeric variables from the uploaded data are listed as possible choices for the response variable.')
+p(strong('Remember to upload your data first.'))
 
 p('The default setting is to display plots with only one grouping variable using a black-and-white colour palette. If you wish to add colour to these plots, select the second grouping variable as the same as the first grouping variable.')
 
@@ -123,46 +251,36 @@ p('For plot download options, scroll to the bottom of this sidebar.')
 
 hr()
 
-# Upload file
-fileInput(inputId = 'box_file0', 
-          label = 'Import data (csv format)',
-          multiple = FALSE,
-          accept = c('.csv'))
-
-# Make reactive data
-box_df <- reactive({
-    req(input$box_file0)
-    read_csv(input$box_file0$datapath, 
-             show_col_types = FALSE)
-})
-
 # Select variables
 ## Response variable
 output$box_yvar <- renderUI({
+    req(df_numeric())
     varSelectInput(inputId = 'box_y_var',
                    label = 'Choose response variable',
                    selected = NULL,
-                   data = box_df() %>% select(where(is.numeric)))
+                   data = df_numeric())
     })
 
 uiOutput('box_yvar')
 
 ## Grouping variable
 output$box_groupvar <- renderUI({
+    req(df_categorical())
     selectInput(inputId = 'box_group_var',
                 label = 'Choose grouping variable',
                 selected = 'None',
-                choices = c('None', names(box_df())))
+                choices = c('None', names(df_categorical())))
     })
 
 uiOutput('box_groupvar')
 
 ## Second grouping variable
 output$box_groupvar2 <- renderUI({
+    req(df_categorical)
     selectInput(inputId = 'box_group2_var',
                 label = 'Choose second grouping variable (optional)',
                 selected = 'None',
-                choices = c('None', names(box_df())))
+                choices = c('None', names(df_categorical())))
     })
 
 uiOutput('box_groupvar2')
@@ -297,13 +415,39 @@ Column
 ```{r boxplot_2}
 # Plot graph
 output$box_plot <- renderPlot(
-    if(req(input$box_plot_type) == 'box' & req(input$box_group_var) != 'None'){
+    
+    if(req(input$box_plot_type) == 'box' & req(input$box_group_var) == 'None'){
+        
+        df_combined() %>%
+                ggplot(data = .) +
+                aes(x = '',
+                    y = !!input$box_y_var) +
+                geom_boxplot() +
+                labs(title = input$box_title,
+                     y = input$box_y_label,
+                     x = input$box_x_label) +
+                scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
+                scale_x_discrete(na.translate = FALSE) +
+                theme_minimal(base_size = input$box_base_size) +
+                theme(legend.position = 'none',
+                          plot.background = element_rect(colour = '#FFFFFF',
+                                                         fill = '#FFFFFF'),
+                          plot.title = element_text(size = input$box_base_size),
+                          axis.text = element_text(colour = '#000000'),
+                          axis.line = element_line(colour = '#000000',
+                                                   size = 0.5),
+                          axis.ticks = element_line(colour = '#000000',
+                                                    size = 0.5),
+                          panel.grid = element_blank()) 
+        
+        
+    } else if(req(input$box_plot_type) == 'box' & req(input$box_group_var) != 'None'){
         
         if(req(input$box_group2_var) == 'None'){
             
-            box_df() %>%
+            df_combined() %>%
                 ggplot(data = .) +
-                aes(x = factor(box_df()[[input$box_group_var]]),
+                aes(x = df_combined()[[input$box_group_var]],
                     y = !!input$box_y_var) +
                 geom_boxplot() +
                 labs(title = input$box_title,
@@ -327,12 +471,12 @@ output$box_plot <- renderPlot(
             
             if(input$box_legend_position != 'legend_user'){
                 
-                box_df() %>% 
+                df_combined() %>% 
                     ggplot(data = .) +
-                    aes(x = factor(box_df()[[input$box_group_var]]),
+                    aes(x = df_combined()[[input$box_group_var]],
                         y = !!input$box_y_var,
-                        fill = factor(box_df()[[input$box_group2_var]]),
-                        colour = factor(box_df()[[input$box_group2_var]])) +
+                        fill = df_combined()[[!!input$box_group2_var]],
+                        colour = df_combined()[[!!input$box_group2_var]]) +
                     geom_boxplot(alpha = 0.6) +
                     labs(title = input$box_title,
                          y = input$box_y_label,
@@ -358,12 +502,12 @@ output$box_plot <- renderPlot(
                 
                 } else if(input$box_legend_position == 'legend_user'){
                     
-                    box_df() %>% 
+                    df_combined() %>% 
                         ggplot(data = .) +
-                        aes(x = factor(box_df()[[input$box_group_var]]),
+                        aes(x = df_combined()[[input$box_group_var]],
                             y = !!input$box_y_var,
-                            fill = factor(box_df()[[input$box_group2_var]]),
-                            colour = factor(box_df()[[input$box_group2_var]])) +
+                            fill = df_combined()[[!!input$box_group2_var]],
+                            colour = df_combined()[[!!input$box_group2_var]]) +
                         geom_boxplot(alpha = 0.6) +
                         labs(title = input$box_title,
                              y = input$box_y_label,
@@ -390,13 +534,49 @@ output$box_plot <- renderPlot(
                 }
             }
         
+        } else if(input$box_plot_type == 'box_points' & input$box_group_var == 'None'){
+            
+            df_combined() %>%
+                ggplot(data = .) +
+                aes(x = '',
+                    y = !!input$box_y_var) +
+                geom_boxplot(outlier.shape = NA) +
+                geom_point(position = position_jitter(seed = 1234,
+                                                      width = input$box_scatter_width,
+                                                      height = 0),
+                           fill = '#000000',
+                           alpha = input$box_alpha,
+                           shape = 21,
+                           size = input$box_size) +
+                geom_point(position = position_jitter(seed = 1234,
+                                                      width = input$box_scatter_width,
+                                                      height = 0),
+                           shape = 21,
+                           size = input$box_size) +
+                labs(title = input$box_title,
+                     y = input$box_y_label,
+                     x = input$box_x_label) +
+                scale_y_continuous(limits = c(input$box_min_y, input$box_max_y)) +
+                scale_x_discrete(na.translate = FALSE) +
+                theme_minimal(base_size = input$box_base_size) +
+                theme(legend.position = 'none',
+                          plot.background = element_rect(colour = '#FFFFFF',
+                                                         fill = '#FFFFFF'),
+                          plot.title = element_text(size = input$box_base_size),
+                          axis.text = element_text(colour = '#000000'),
+                          axis.line = element_line(colour = '#000000',
+                                                   size = 0.5),
+                          axis.ticks = element_line(colour = '#000000',
+                                                    size = 0.5),
+                          panel.grid = element_blank()) 
+            
         } else if(input$box_plot_type == 'box_points' & input$box_group_var != 'None'){
             
             if(req(input$box_group2_var) == 'None'){
             
-            box_df() %>%
+            df_combined() %>%
                 ggplot(data = .) +
-                aes(x = factor(box_df()[[input$box_group_var]]),
+                aes(x = df_combined()[[input$box_group_var]],
                     y = !!input$box_y_var) +
                 geom_boxplot(outlier.shape = NA) +
                 geom_point(position = position_jitter(seed = 1234,
@@ -432,12 +612,12 @@ output$box_plot <- renderPlot(
             
             if(input$box_legend_position != 'legend_user'){
                 
-                box_df() %>% 
+                df_combined() %>% 
                     ggplot(data = .) +
-                    aes(x = factor(box_df()[[input$box_group_var]]),
+                    aes(x = df_combined()[[input$box_group_var]],
                         y = !!input$box_y_var,
-                        fill = factor(box_df()[[input$box_group2_var]]),
-                        colour = factor(box_df()[[input$box_group2_var]])) +
+                        fill = df_combined()[[!!input$box_group2_var]],
+                        colour = df_combined()[[!!input$box_group2_var]]) +
                     geom_boxplot(outlier.shape = NA,
                                  alpha = 0.6) +
                     geom_point(position = position_jitterdodge(seed = 1234,
@@ -476,12 +656,12 @@ output$box_plot <- renderPlot(
                 
                 } else if(input$box_legend_position == 'legend_user'){
                     
-                    box_df() %>% 
+                    df_combined() %>% 
                         ggplot(data = .) +
-                        aes(x = factor(box_df()[[input$box_group_var]]),
+                        aes(x = df_combined()[[input$box_group_var]],
                             y = !!input$box_y_var,
-                            fill = factor(box_df()[[input$box_group2_var]]),
-                            colour = factor(box_df()[[input$box_group2_var]])) +
+                            fill = df_combined()[[!!input$box_group2_var]],
+                            colour = df_combined()[[!!input$box_group2_var]]) +
                         geom_boxplot(outlier.shape = NA,
                                      alpha = 0.6) +
                         geom_point(position = position_jitterdodge(seed = 1234,
@@ -551,51 +731,41 @@ Column {.sidebar data-width=350}
 ```{r scatter_1}
 h1('Scatter plot')
 
-p('Only numeric variables from the uploaded data are listed as possible rchoices for the response variables.')
-
-p('For the optional grouping variable, all variables in the uploaded dataset are coerced to categorical data type.')
+p(strong('Remember to upload your data first.'))
 
 p('For download options, scroll to the bottom of this sidebar.')
 
 hr()
 
-# Upload file
-fileInput(inputId = 'scatter_file0', 
-          label = 'Import data (csv format)',
-          multiple = FALSE,
-          accept = c('.csv'))
-
-# Make reactive data
-scatter_df <- reactive({
-    req(input$scatter_file0)
-    read_csv(input$scatter_file0$datapath, 
-             show_col_types = FALSE)
-})
-
 # Select variables
 ## Y variable
 output$scatter_yvar <- renderUI({
+    req(df_numeric())
     varSelectInput(inputId = 'scatter_y_var',
                    label = 'Choose response variable (y-axis)',
-                   data = scatter_df() %>% select(where(is.numeric)))
+                   selected = NULL,
+                   data =  df_numeric())
     })
 
 uiOutput('scatter_yvar')
 
 ## X variable
 output$scatter_xvar <- renderUI({
+    req(df_numeric())
     varSelectInput(inputId = 'scatter_x_var',
                    label = 'Choose response variable (x-axis)',
-                   data = scatter_df() %>% select(where(is.numeric)))
+                   selected = NULL,
+                   data =  df_numeric())
     })
 
 uiOutput('scatter_xvar')
 
 output$scatter_groupvar <- renderUI({
+    req(df_categorical())
     selectInput(inputId = 'scatter_group_var',
-            label = 'Choose grouping variable (optional)',
-            selected = NULL,
-            choices = c('None', names(scatter_df())))
+                label = 'Choose grouping variable (optional)',
+                selected = NULL,
+                choices = c('None', names(df_categorical())))
 })
 
 uiOutput('scatter_groupvar')
@@ -736,7 +906,7 @@ output$scatter_plot <- renderPlot(
     
     if(req(input$scatter_smooth) == 'none' & req(input$scatter_group_var) == 'None'){
         
-        ggplot(data = scatter_df()) +
+        ggplot(data = df_combined()) +
         aes(x = !!input$scatter_x_var,
             y = !!input$scatter_y_var) +
         geom_point(shape = 21,
@@ -765,7 +935,7 @@ output$scatter_plot <- renderPlot(
         
     } else if(input$scatter_smooth == 'linear' & input$scatter_group_var == 'None'){
         
-        ggplot(data = scatter_df()) +
+        ggplot(data = df_combined()) +
         aes(x = !!input$scatter_x_var,
             y = !!input$scatter_y_var) +
         geom_point(shape = 21,
@@ -798,7 +968,7 @@ output$scatter_plot <- renderPlot(
         
     } else if(input$scatter_smooth == 'loess' & input$scatter_group_var == 'None'){
         
-        ggplot(data = scatter_df()) +
+        ggplot(data = df_combined()) +
         aes(x = !!input$scatter_x_var,
             y = !!input$scatter_y_var) +
         geom_point(shape = 21,
@@ -833,11 +1003,11 @@ output$scatter_plot <- renderPlot(
         
         if(input$scatter_legend_position != 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -871,11 +1041,11 @@ output$scatter_plot <- renderPlot(
             
         } else if(input$scatter_legend_position == 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -913,11 +1083,11 @@ output$scatter_plot <- renderPlot(
         
         if(input$scatter_legend_position != 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -951,11 +1121,11 @@ output$scatter_plot <- renderPlot(
             
         } else if(input$scatter_legend_position == 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -993,11 +1163,11 @@ output$scatter_plot <- renderPlot(
         
         if(input$scatter_legend_position != 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -1028,11 +1198,11 @@ output$scatter_plot <- renderPlot(
             
         } else if(input$scatter_legend_position == 'legend_user'){
             
-            ggplot(data = scatter_df()) +
+            ggplot(data = df_combined()) +
                 aes(x = !!input$scatter_x_var,
                     y = !!input$scatter_y_var,
-                    fill = factor(scatter_df()[[input$scatter_group_var]]),
-                    colour = factor(scatter_df()[[input$scatter_group_var]])) +
+                    fill = df_combined()[[input$scatter_group_var]],
+                    colour = df_combined()[[input$scatter_group_var]]) +
                 geom_point(shape = 21,
                            alpha = input$scatter_alpha,
                            size = input$scatter_size) +
@@ -1093,32 +1263,18 @@ Column {.sidebar data-width=350}
 ```{r histogram_1}
 h1('Histogram')
 
-p('Only numeric variables from the uploaded data are listed as possible choices for the data that will be plotted.')
+p(strong('Remember to upload your data first.'))
 
 p('For download options, scroll to the bottom of this sidebar.')
 
 hr()
-
-# Upload file
-fileInput(inputId = 'histo_file0', 
-          label = 'Import data (csv format)',
-          multiple = FALSE,
-          accept = c('.csv'))
-
-# Make reactive data
-histo_df <- reactive({
-    req(input$histo_file0)
-    read_csv(input$histo_file0$datapath, 
-             show_col_types = FALSE) %>% 
-        select(where(is.numeric))
-})
 
 # Select variables
 ## Response variable
 output$histo_var <- renderUI({
     varSelectInput(inputId = 'histo_var',
                    label = 'Choose variable to be plotted',
-                   data = histo_df())
+                   data = df_numeric())
     })
 
 uiOutput('histo_var')
@@ -1194,8 +1350,8 @@ Column
 # Plot graph
 output$histo_plot <- renderPlot(
     
-        ggplot(data = histo_df()) +
-        aes(histo_df()[[input$histo_var]]) +
+        ggplot(data = df_numeric()) +
+        aes(!!input$histo_var) +
         geom_histogram(binwidth = input$histo_bin_width,
                        fill = '#000000',
                        colour = '#000000',
