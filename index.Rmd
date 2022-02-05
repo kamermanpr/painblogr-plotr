@@ -74,11 +74,11 @@ penguins %>%
 Welcome {data-nav='Welcome'}
 ===================================== 
 
-<a href='https://www.wits.ac.za' target='_blank'>
+<!--- <a href='https://www.wits.ac.za' target='_blank'>
 <img src='wits-logo.png' 
 alt='Wits give you the edge' 
 width='25%'>
-</a>
+</a> --->
 
 **Welcome**  
 
@@ -1272,6 +1272,7 @@ hr()
 # Select variables
 ## Response variable
 output$histo_var <- renderUI({
+    req(df_numeric())
     varSelectInput(inputId = 'histo_var',
                    label = 'Choose variable to be plotted',
                    data = df_numeric())
@@ -1400,76 +1401,35 @@ Column {.sidebar data-width=350}
 ```{r column_1}
 h1('Bar chart')
 
-p('All variables in the uploaded data are coerced to categorical data type.')
+p(strong('Remember to upload your data first.'))
 
 p('For download options, scroll to the bottom of this sidebar.')
 
 hr()
 
-# Upload file
-fileInput(inputId = 'bar_file0', 
-          label = 'Import data (csv format)',
-          multiple = FALSE,
-          accept = c('.csv'))
-
-# Make reactive data
-bar_df <- reactive({
-    req(input$bar_file0)
-    read_csv(input$bar_file0$datapath, 
-             show_col_types = FALSE)
-})
-
-# Choose numeric columns
-output$bar_numeric <- renderUI({
-    varSelectInput(inputId = 'bar_columns_numeric',
-                   label = 'Select variables to treat as numeric',
-                   selected = NULL,
-                   multiple = TRUE,
-                   data = bar_df())
-})
-
-uiOutput('bar_numeric')
-
-# Choose categorical columns
-output$bar_grouping <- renderUI({
-    varSelectInput(inputId = 'bar_columns_group',
-                   label = 'Select variables to treat as grouping (categorical)',
-                   selected = NULL,
-                   multiple = TRUE,
-                   data = bar_df())
-})
-
-uiOutput('bar_grouping')
-
-# Convert columns
-bar_df2 <- reactive({
-    bar_df() %>% 
-        mutate(across(.cols = input$bar_columns_numeric, ~as.numeric(.x))) %>% 
-        mutate(across(.cols = input$bar_columns_group, ~factor(.x)))
-})
-
 # Select variables
-## Response variable
-output$bar_analysisvar <- renderUI({
-    req(bar_df2())
-    varSelectInput(inputId = 'bar_analysis_var',
-                   label = 'Choose variable to plot',
+## Choose column to plot
+output$bar_column <- renderUI({
+    req(df_categorical())
+    varSelectInput(inputId = 'bar_column_plot',
+                   label = 'Select variables to plot',
                    selected = NULL,
-                   data = bar_df())
-    })
+                   multiple = FALSE,
+                   data = df_categorical())
+})
 
-uiOutput('bar_analysisvar')
+uiOutput('bar_column')
 
-## Grouping variable
-output$bar_groupvar<- renderUI({
-    req(bar_df2())
-    selectInput(inputId = 'bar_group_var',
-                label = 'Choose grouping variable (optional)',
+## Choose grouping column
+output$bar_group <- renderUI({
+    req(df_categorical())
+    selectInput(inputId = 'bar_column_group',
+                label = 'Select grouping variable (optional)',
                 selected = 'None',
-                choices = c('None', names(bar_df())))
-    })
+                choices = c('None', names(df_categorical())))
+})
 
-uiOutput('bar_groupvar')
+uiOutput('bar_group')
 
 ## Add labels
 textInput(inputId = 'bar_title', 
@@ -1509,7 +1469,14 @@ numericInput(inputId = 'bar_max_y',
 
 hr()
 
-strong('Options for the second grouping variable')
+strong('Options for the grouping variable')
+
+## Remove NA values
+radioButtons(inputId = 'bar_na',
+             label = 'Grouping variable missing values',
+             choices = c('Keep (default)' = 'keep',
+                         'Remove' = 'remove'),
+             selected = 'keep')
 
 ## Choose plot type
 radioButtons(inputId = 'bar_plot_type',
@@ -1586,132 +1553,64 @@ Column
 ### Plot
 
 ```{r column_2}
+# Silently remove NA values
+df_categorical2 <- reactive({
+    df_categorical() %>% 
+        drop_na(!!input$bar_column_plot, input$bar_column_group)
+    })
+
 # Plot graph
 output$bar_plot <- renderPlot(
     
-    if(req(input$bar_analysis_var) != NULL & req(input$bar_group_var) == 'None'){
+    if(!is.null(req(input$bar_column_plot)) & req(input$bar_column_group) == 'None'){
         
-        ggplot(data = bar_df()) +
-        aes(x = !!input$bar_analysis_var) +
-        geom_bar(colour = '#000000',
-                 fill = '#000000',
-                 alpha = input$bar_alpha) +
-        geom_bar(colour = '#000000',
-                 fill = NA) +
-        labs(title = input$bar_title,
-             y = input$bar_y_label,
-             x = input$bar_x_label) +
-        scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-        theme_minimal(base_size = input$bar_base_size) +
-        theme(plot.background = element_rect(colour = '#FFFFFF',
-                                             fill = '#FFFFFF'),
-              plot.title = element_text(size = input$bar_base_size),
-              axis.text = element_text(colour = '#000000'),
-              axis.line = element_line(colour = '#000000',
-                                       size = 0.5),
-              axis.ticks = element_line(colour = '#000000',
-                                        size = 0.5),
-              panel.grid = element_blank())
-        
-    } else if(input$bar_smooth == 'linear' & input$bar_group_var == 'None'){
-        
-        ggplot(data = bar_df()) +
-        aes(x = !!input$bar_x_var,
-            y = !!input$bar_y_var) +
-        geom_point(shape = 21,
-                   colour = '#000000',
-                   fill = '#000000',
-                   alpha = input$bar_alpha,
-                   size = input$bar_size) +
-        geom_point(shape = 21,
-                   colour = '#000000',
-                   size = input$bar_size) +
-        geom_smooth(method = 'lm',
-                    colour = '#000000',
-                    size = 1,
-                    se = FALSE) +
-        labs(title = input$bar_title,
-             y = input$bar_y_label,
-             x = input$bar_x_label) +
-        scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
-        scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-        theme_minimal(base_size = input$bar_base_size) +
-        theme(plot.background = element_rect(colour = '#FFFFFF',
-                                             fill = '#FFFFFF'),
-              plot.title = element_text(size = input$bar_base_size),
-              axis.text = element_text(colour = '#000000'),
-              axis.line = element_line(colour = '#000000',
-                                       size = 0.5),
-              axis.ticks = element_line(colour = '#000000',
-                                        size = 0.5),
-              panel.grid = element_blank())
-        
-    } else if(input$bar_smooth == 'loess' & input$bar_group_var == 'None'){
-        
-        ggplot(data = bar_df()) +
-        aes(x = !!input$bar_x_var,
-            y = !!input$bar_y_var) +
-        geom_point(shape = 21,
-                   colour = '#000000',
-                   fill = '#000000',
-                   alpha = input$bar_alpha,
-                   size = input$bar_size) +
-        geom_point(shape = 21,
-                   colour = '#000000',
-                   size = input$bar_size) +
-        geom_smooth(method = 'loess',
-                    colour = '#000000',
-                    size = 1,
-                    se = FALSE) +
-        labs(title = input$bar_title,
-             y = input$bar_y_label,
-             x = input$bar_x_label) +
-        scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
-        scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-        theme_minimal(base_size = input$bar_base_size) +
-        theme(plot.background = element_rect(colour = '#FFFFFF',
+        ggplot(data = df_categorical()) +
+            aes(x = !!input$bar_column_plot) +
+            geom_bar(colour = '#000000',
+                     fill = '#000000',
+                     alpha = input$bar_alpha) +
+            geom_bar(colour = '#000000',
+                     fill = NA) +
+            labs(title = input$bar_title,
+                 y = input$bar_y_label,
+                 x = input$bar_x_label) +
+            scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+            scale_x_discrete(na.translate = FALSE) +
+            theme_minimal(base_size = input$bar_base_size) +
+            theme(plot.background = element_rect(colour = '#FFFFFF',
                                                  fill = '#FFFFFF'),
-              plot.title = element_text(size = input$bar_base_size),
-              axis.text = element_text(colour = '#000000'),
-              axis.line = element_line(colour = '#000000',
-                                       size = 0.5),
-              axis.ticks = element_line(colour = '#000000',
-                                        size = 0.5),
-              panel.grid = element_blank())
+                  plot.title = element_text(size = input$bar_base_size),
+                  axis.text = element_text(colour = '#000000'),
+                  axis.line = element_line(colour = '#000000',
+                                           size = 0.5),
+                  axis.ticks = element_line(colour = '#000000',
+                                            size = 0.5),
+                  panel.grid = element_blank())
         
-    } else if(input$bar_smooth == 'linear' & input$bar_group_var != 'None'){
+    } else if(input$bar_plot_type == 'bar_side' & input$bar_column_group != 'None' & input$bar_na == 'remove'){
         
         if(input$bar_legend_position != 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
-                geom_smooth(method = 'lm',
-                            size = 1,
-                            se = FALSE) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_dodge(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_dodge(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = input$bar_legend_position,
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = input$bar_legend_position,
-                      legend.title = element_blank(),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1721,35 +1620,26 @@ output$bar_plot <- renderPlot(
             
         } else if(input$bar_legend_position == 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
-                geom_smooth(method = 'lm',
-                            size = 1,
-                            se = FALSE) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_dodge(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_dodge(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = c(input$bar_x_legend, input$bar_y_legend),
-                      legend.title = element_blank(),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1759,39 +1649,30 @@ output$bar_plot <- renderPlot(
             
         }
         
-    } else if(input$bar_smooth == 'loess' & input$bar_group_var != 'None'){
+    } else if(input$bar_plot_type == 'bar_stacked' & input$bar_column_group != 'None' & input$bar_na == 'remove'){
         
         if(input$bar_legend_position != 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
-                geom_smooth(method = 'loess',
-                            size = 1,
-                            se = FALSE) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_stack(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_stack(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = input$bar_legend_position,
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = input$bar_legend_position,
-                      legend.title = element_blank(),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1801,35 +1682,26 @@ output$bar_plot <- renderPlot(
             
         } else if(input$bar_legend_position == 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
-                geom_smooth(method = 'loess',
-                            size = 1,
-                            se = FALSE) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_stack(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_stack(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = c(input$bar_x_legend, input$bar_y_legend),
-                      legend.title = element_blank(),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1839,36 +1711,30 @@ output$bar_plot <- renderPlot(
             
         }
         
-    } else {
+    } else if(input$bar_plot_type == 'bar_prop' & input$bar_column_group != 'None' & input$bar_na == 'remove'){
         
         if(input$bar_legend_position != 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_fill(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_fill(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = input$bar_legend_position,
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = input$bar_legend_position,
-                      legend.title = element_blank(),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1878,32 +1744,223 @@ output$bar_plot <- renderPlot(
             
         } else if(input$bar_legend_position == 'legend_user'){
             
-            ggplot(data = bar_df()) +
-                aes(x = !!input$bar_x_var,
-                    y = !!input$bar_y_var,
-                    fill = bar_df()[[input$bar_group_var]],
-                    colour = bar_df()[[input$bar_group_var]]) +
-                geom_point(shape = 21,
-                           alpha = input$bar_alpha,
-                           size = input$bar_size) +
-                geom_point(shape = 21,
-                           fill = NA,
-                           size = input$bar_size) +
+            ggplot(data = df_categorical2()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical2()[[input$bar_column_group]],
+                    colour = df_categorical2()[[input$bar_column_group]]) +
+                geom_bar(position = position_fill(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_fill(),
+                         fill = NA) +
                 labs(title = input$bar_title,
                      y = input$bar_y_label,
                      x = input$bar_x_label) +
-                scale_x_continuous(limits = c(input$bar_min_x, input$bar_max_x)) +
                 scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
-                scale_colour_tableau(palette = input$bar_colours,
-                                     na.translate = FALSE) +
-                scale_fill_tableau(palette = input$bar_colours,
-                                   na.translate = FALSE) +
+                scale_fill_tableau(palette = input$bar_colours) +
+                scale_colour_tableau(palette = input$bar_colours) +
                 theme_minimal(base_size = input$bar_base_size) +
-                theme(plot.background = element_rect(colour = '#FFFFFF',
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
                                                      fill = '#FFFFFF'),
                       plot.title = element_text(size = input$bar_base_size),
-                      legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
+    } else if(input$bar_plot_type == 'bar_side' & input$bar_column_group != 'None' & input$bar_na == 'keep'){
+        
+        if(input$bar_legend_position != 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_dodge(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_dodge(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = input$bar_legend_position,
                       legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$bar_legend_position == 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_dodge(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_dodge(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
+        
+    } else if(input$bar_plot_type == 'bar_stacked' & input$bar_column_group != 'None' & input$bar_na == 'keep'){
+        
+        if(input$bar_legend_position != 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_stack(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_stack(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = input$bar_legend_position,
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$bar_legend_position == 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_stack(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_stack(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        }
+        
+    } else if(input$bar_plot_type == 'bar_prop' & input$bar_column_group != 'None' & input$bar_na == 'keep'){
+        
+        if(input$bar_legend_position != 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_fill(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_fill(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = input$bar_legend_position,
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
+                      axis.text = element_text(colour = '#000000'),
+                      axis.line = element_line(colour = '#000000',
+                                               size = 0.5),
+                      axis.ticks = element_line(colour = '#000000',
+                                                size = 0.5),
+                      panel.grid = element_blank())
+            
+        } else if(input$bar_legend_position == 'legend_user'){
+            
+            ggplot(data = df_categorical()) +
+                aes(x = !!input$bar_column_plot,
+                    fill = df_categorical()[[input$bar_column_group]],
+                    colour = df_categorical()[[input$bar_column_group]]) +
+                geom_bar(position = position_fill(),
+                         alpha = input$bar_alpha) +
+                geom_bar(position = position_fill(),
+                         fill = NA) +
+                labs(title = input$bar_title,
+                     y = input$bar_y_label,
+                     x = input$bar_x_label) +
+                scale_y_continuous(limits = c(input$bar_min_y, input$bar_max_y)) +
+                scale_fill_tableau(palette = input$bar_colours,
+                                   na.value = '#999999') +
+                scale_colour_tableau(palette = input$bar_colours,
+                                     na.value = '#999999') +
+                theme_minimal(base_size = input$bar_base_size) +
+                theme(legend.position = c(input$bar_x_legend, input$bar_y_legend),
+                      legend.title = element_blank(),
+                      plot.background = element_rect(colour = '#FFFFFF',
+                                                     fill = '#FFFFFF'),
+                      plot.title = element_text(size = input$bar_base_size),
                       axis.text = element_text(colour = '#000000'),
                       axis.line = element_line(colour = '#000000',
                                                size = 0.5),
@@ -1913,7 +1970,6 @@ output$bar_plot <- renderPlot(
             
         }
     }
-    
 )
 
 plotOutput('bar_plot')
@@ -1921,7 +1977,7 @@ plotOutput('bar_plot')
 
 ```{r column_3}
 # Download plot
-output$barchart_download_button <- downloadHandler(
+output$barplot_download_button <- downloadHandler(
     filename = function() {
         paste0('barcharts_', Sys.Date(), '.', input$bar_format)
     },
