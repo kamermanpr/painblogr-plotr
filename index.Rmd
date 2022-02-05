@@ -171,7 +171,9 @@ hr()
 fileInput(inputId = 'file0', 
           label = 'Import data (csv format)',
           multiple = FALSE,
-          accept = c('.csv'))
+          accept = c("text/csv",
+                     "text/comma-separated-values,text/plain",
+                     ".csv"))
 
 # Make reactive data
 df <- reactive({
@@ -183,9 +185,9 @@ df <- reactive({
 # Choose numeric columns
 output$data_numeric <- renderUI({
     varSelectizeInput(inputId = 'numeric',
-                   label = 'Select numeric variables',
-                   multiple = TRUE,
-                   data = df())
+                      label = 'Select numeric variables',
+                      multiple = TRUE,
+                      data = df())
 })
 
 uiOutput('data_numeric')
@@ -193,9 +195,9 @@ uiOutput('data_numeric')
 # Choose categorical columns
 output$data_categorical <- renderUI({
     varSelectizeInput(inputId = 'categorical',
-                   label = 'Select categorical variables',
-                   multiple = TRUE,
-                   data = df())
+                      label = 'Select categorical variables',
+                      multiple = TRUE,
+                      data = df())
 })
 
 uiOutput('data_categorical')
@@ -757,6 +759,8 @@ Column {.sidebar data-width=350}
 h1('Scatter plot')
 
 p(strong('Remember to upload your data first.'))
+
+p('The default setting is to display plots with no grouping variable using a black-and-white colour palette. Colour options only become available when adding a grouping variable.')
 
 p('For download options, scroll to the bottom of this sidebar.')
 
@@ -1428,6 +1432,8 @@ h1('Bar chart')
 
 p(strong('Remember to upload your data first.'))
 
+p('The default setting is to display plots with no grouping variable using a black-and-white colour palette. If you wish to add colour to these plots, select the grouping variable as the same as the primary variable that is being plotted.')
+
 p('For download options, scroll to the bottom of this sidebar.')
 
 hr()
@@ -1437,7 +1443,7 @@ hr()
 output$bar_column <- renderUI({
     req(df_categorical())
     varSelectInput(inputId = 'bar_column_plot',
-                   label = 'Select variables to plot',
+                   label = 'Select variable to plot',
                    selected = NULL,
                    multiple = FALSE,
                    data = df_categorical())
@@ -1498,9 +1504,9 @@ strong('Options for the grouping variable')
 
 ## Remove NA values
 radioButtons(inputId = 'bar_na',
-             label = 'Grouping variable missing values',
-             choices = c('Keep (default)' = 'keep',
-                         'Remove' = 'remove'),
+             label = 'Grouping variable has missing values',
+             choices = c("Keep missing values (default, missing values indicated by 'NA' group')" = 'keep',
+                         'Remove missing values' = 'remove'),
              selected = 'keep')
 
 ## Choose plot type
