@@ -800,7 +800,7 @@ uiOutput('scatter_yvar')
 output$scatter_xvar <- renderUI({
     req(df_numeric())
     varSelectInput(inputId = 'scatter_x_var',
-                   label = 'Choose response variable (x-axis)',
+                   label = 'Choose independent variable (x-axis)',
                    selected = NULL,
                    data =  df_numeric())
     })
