@@ -6,7 +6,7 @@ authors:
 - family-names: "Nair"
   given-names: "Kavilan"
 title: "plotr: an online academic plotting application"
-version: 0.1.4
+version: 0.1.5
 doi: 10.5281/zenodo.5977332
 date-released: 2022-02-05
 url: "https://github.com/kamermanpr/painblogr-plotr"
